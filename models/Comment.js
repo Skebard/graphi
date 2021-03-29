@@ -2,11 +2,11 @@ import mongoose from 'mongoose'
 
 const Schema = mongoose.Schema
 
-export const Book = mongoose.model('Book', {
+export const Comment = mongoose.model('Comment', {
   name: String,
   pages: Number,
-  author: {
+  movie: {
     type: Schema.Types.ObjectId,
-    ref: 'Author'
+    ref: 'Movie'
   }
 })

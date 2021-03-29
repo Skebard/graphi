@@ -1,107 +1,170 @@
-import { gql } from 'apollo-server-express'
-import { Author } from '../models/Author'
-import { Book } from '../models/Book'
+import { gql } from "apollo-server-express";
+import { Movie } from "../models/Movie";
+import { Comment } from "../models/Comment";
+import { Rating } from "../models/Rating";
 
 const typeDefs = gql`
   type Query {
-    authors: [Author!]!
-    books: [Book!]!
+    movies: [Movie!]!
+    comments: [Comment!]!
+    ratings: [Rating!]!
   }
-  type Author {
+  type Movie {
     id: ID!
-    name: String!
-    books: [Book!]
+    title: String!
+    comments: [Comment!]
+    ratings: [Rating!]
   }
-  type Book {
+  type Comment {
     id: ID!
     name: String!
     pages: Int
-    author: Author!
+    movie: Movie!
+  }
+  type Rating {
+    id: ID!
+    value: Int
+    movie: Movie!
   }
   type Mutation {
-    createAuthor(name: String!): Author!
-    createBook(name: String!, pages: Int, author: String!): Book!
+    createMovie(title: String!): Movie!
+    createComment(name: String!, pages: Int, movie: String!): Comment!
+    createRating(value: Int!, movie: String!): Rating!
   }
-`
+`;
 
-const books = async bookIds => {
+const comments = async (commentIds) => {
   try {
-    const books = await Book.find({_id: { $in: bookIds }})
-    return books.map(book => ({
-      ...book._doc,
-      author: author.bind(this, book._doc.author)
-    }))
+    const comments = await Comment.find({
+      _id: {
+        $in: commentIds,
+      },
+    });
+    return comments.map((comment) => ({
+      ...comment._doc,
+      movie: movie.bind(this, comment._doc.movie),
+    }));
   } catch {
-    throw err
+    throw err;
+  }
+};
+
+const ratings = async (ratingsIds)=>{
+  try{
+    const ratings = await Rating.find({
+      _id:{
+        $in:ratingsIds,
+      },
+    });
+    return ratings.map(rating=>({
+      ...rating._doc,
+      movie: movie.bind(this,rating._doc.movie),
+    }))
+  }catch{
+    throw err;
   }
 }
 
-const author = async authorId => {
+const movie = async (movieId) => {
   try {
-    const author = await Author.findById(authorId)
+    const movie = await Movie.findById(movieId);
     return {
-      ...author._doc,
-      books: books.bind(this, author._doc.books)
-    }
+      ...movie._doc,
+      comments: comments.bind(this, movie._doc.comments),
+      ratings: ratings.bind(this, movie._doc.ratings)
+    };
   } catch (err) {
-    throw err
+    throw err;
   }
-}
+};
 
 const resolvers = {
   Query: {
-    authors: async () => {
+    movies: async () => {
       try {
-        const authors = await Author.find()
-        return authors.map(author => ({
-          ...author._doc,
-          books: books.bind(this, author._doc.books)
-        }))
+        const movies = await Movie.find();
+        return movies.map((movie) => ({
+          ...movie._doc,
+          comments: comments.bind(this, movie._doc.comments),
+          ratings: ratings.bind(this, movie._doc.ratings)
+        }));
       } catch (err) {
-        throw err
+        throw err;
       }
     },
-    books: async () => {
+    comments: async () => {
       try {
-        const books = await Book.find()
-        return books.map(book => ({
-          ...book._doc,
-          author: author.bind(this, book._doc.author)
-        }))
+        const comments = await Comment.find();
+        return comments.map((comment) => ({
+          ...comment._doc,
+          movie: movie.bind(this, comment._doc.movie),
+        }));
       } catch (err) {
-        throw err
+        throw err;
+      }
+    },
+    ratings: async()=>{
+      try{
+        const ratings = await Rating.find();
+        return ratings.map(rating=>({
+          ...rating._doc,
+          movie: movie.bind(this, rating._doc.movie)
+        }))
+      }catch(err){
+        throw err;
       }
     }
   },
   Mutation: {
-    createAuthor: async (_, { name }) => {
+    createMovie: async (_, { title }) => {
       try {
-        const author = new Author({ name })
-        await author.save()
-        return author;
+        const movie = new Movie({
+          title,
+        });
+        await movie.save();
+        return movie;
       } catch (err) {
-        throw err
+        throw err;
       }
     },
-    createBook: async (_, { name, pages, author: authorId }) => {
-      const book = new Book({ name, pages, author: authorId })
+    createComment: async (_, { name, pages, movie: movieId }) => {
+      const comment = new Comment({
+        name,
+        pages,
+        movie: movieId,
+      });
       try {
-        const savedBook = await book.save()
-        const authorRecord = await Author.findById(authorId)
-        authorRecord.books.push(book)
-        await authorRecord.save()
+        const savedComment = await comment.save();
+        const movieRecord = await Movie.findById(movieId);
+        movieRecord.comments.push(comment);
+        await movieRecord.save();
         return {
-          ...savedBook._doc,
-          author: author.bind(this, authorId)
-        }
+          ...savedComment._doc,
+          movie: movie.bind(this, movieId),
+        };
       } catch (err) {
-        throw err
+        throw err;
       }
-    }
-  }
-}
+    },
+    createRating: async (_, { value, movie: movieId }) => {
+      const rating = new Rating({
+        value,
+        movie: movieId,
+      });
+      try{
+        const savedRating = await rating.save();
+        const movieRecord = await Movie.findById(movieId);
+        movieRecord.ratings.push(rating);
+        await movieRecord.save();
+        return {
+          ...savedRating._doc,
+          movie: movie.bind(this, movieId),
+        };
+      }catch(err){
+        throw err;
+      }
+    },
+  },
+};
 
-export {
-  typeDefs,
-  resolvers
-}
+export { typeDefs, resolvers };
